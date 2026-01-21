@@ -1,0 +1,10 @@
+{
+  "/signup/page": "app/signup/page.js",
+  "/page": "app/page.js",
+  "/login/page": "app/login/page.js",
+  "/profile/page": "app/profile/page.js",
+  "/products/page": "app/products/page.js",
+  "/investments/page": "app/investments/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/logs/page": "app/logs/page.js"
+}
