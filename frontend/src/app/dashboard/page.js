@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Link from 'next/link';
+import { TrendingUp, Wallet, PieChart, ArrowRight } from 'lucide-react';
 
 export default function Dashboard() {
   const { user, token, loading: authLoading } = useAuth();
@@ -40,63 +41,89 @@ export default function Dashboard() {
   };
 
   if (authLoading || loading) {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+    return <div className="flex justify-center items-center min-h-screen bg-gray-50">
+      <div className="text-black text-xl">Loading...</div>
+    </div>;
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-8">Dashboard</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-500 text-sm mb-2">Total Invested</h3>
-          <p className="text-3xl font-bold text-blue-600">
-            ₹{portfolio?.total_invested || '0.00'}
-          </p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-500 text-sm mb-2">Expected Returns</h3>
-          <p className="text-3xl font-bold text-green-600">
-            ₹{portfolio?.total_expected_return || '0.00'}
-          </p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-black mb-2">Dashboard</h1>
+          <p className="text-gray-600">Welcome back, {user?.first_name}!</p>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-500 text-sm mb-2">Total Investments</h3>
-          <p className="text-3xl font-bold text-purple-600">
-            {portfolio?.investments_count || 0}
-          </p>
-        </div>
-      </div>
-
-      {insights && (
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg shadow mb-8">
-          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-            🤖 AI Portfolio Insights
-          </h2>
-          {insights.message ? (
-            <p className="text-gray-600">{insights.message}</p>
-          ) : (
-            <div className="space-y-2">
-              {insights.insights && insights.insights.map((insight, i) => (
-                <p key={i} className="text-gray-700">• {insight}</p>
-              ))}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-lg shadow-lg border-2 border-black">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-gray-600 text-sm font-semibold">Total Invested</h3>
+              <Wallet className="text-black" size={24} />
             </div>
-          )}
+            <p className="text-4xl font-bold text-black">
+              ₹{portfolio?.total_invested || '0.00'}
+            </p>
+          </div>
+          
+          <div className="bg-white p-6 rounded-lg shadow-lg border-2 border-gray-300 hover:border-black transition">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-gray-600 text-sm font-semibold">Expected Returns</h3>
+              <TrendingUp className="text-green-600" size={24} />
+            </div>
+            <p className="text-4xl font-bold text-green-600">
+              ₹{portfolio?.total_expected_return || '0.00'}
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-lg border-2 border-gray-300 hover:border-black transition">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-gray-600 text-sm font-semibold">Total Investments</h3>
+              <PieChart className="text-gray-800" size={24} />
+            </div>
+            <p className="text-4xl font-bold text-gray-800">
+              {portfolio?.investments_count || 0}
+            </p>
+          </div>
         </div>
-      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Link href="/products" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-          <h3 className="text-xl font-semibold mb-2">Browse Products</h3>
-          <p className="text-gray-600">Explore investment opportunities</p>
-        </Link>
+        {insights && (
+          <div className="bg-black text-white p-8 rounded-lg shadow-lg mb-8">
+            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+              🤖 AI Portfolio Insights
+            </h2>
+            {insights.message ? (
+              <p className="text-gray-300">{insights.message}</p>
+            ) : (
+              <div className="space-y-2">
+                {insights.insights && insights.insights.map((insight, i) => (
+                  <p key={i} className="text-gray-200">• {insight}</p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-        <Link href="/investments" className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-          <h3 className="text-xl font-semibold mb-2">My Investments</h3>
-          <p className="text-gray-600">View your complete portfolio</p>
-        </Link>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Link href="/products" className="group bg-white p-8 rounded-lg shadow-lg border-2 border-gray-300 hover:border-black transition">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-2xl font-bold mb-2 text-black">Browse Products</h3>
+                <p className="text-gray-600">Explore investment opportunities</p>
+              </div>
+              <ArrowRight className="text-black group-hover:translate-x-2 transition" size={32} />
+            </div>
+          </Link>
+
+          <Link href="/investments" className="group bg-white p-8 rounded-lg shadow-lg border-2 border-gray-300 hover:border-black transition">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-2xl font-bold mb-2 text-black">My Investments</h3>
+                <p className="text-gray-600">View your complete portfolio</p>
+              </div>
+              <ArrowRight className="text-black group-hover:translate-x-2 transition" size={32} />
+            </div>
+          </Link>
+        </div>
       </div>
     </div>
   );

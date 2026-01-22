@@ -11,33 +11,71 @@ export default function Navbar() {
     logout();
     router.push('/');
   };
-
+ 
+  const pagename = router.pathname;
+  const navbarbg = pagename === '/dashboard' || pagename === '/products' || pagename === '/investments' || pagename === '/login' || pagename === '/signup'||pagename==='logs'||pagename==='profile';
   return (
-    <nav className="bg-blue-600 text-white shadow-lg">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          <Link href={user ? '/dashboard' : '/'} className="text-2xl font-bold">
-            Grip Invest
+    <nav className="bg-black border-b border-gray-200">
+      <div className="container mx-auto px-6">
+        <div className="flex justify-between items-center h-20">
+          <Link 
+            href={user ? '/dashboard' : '/'} 
+            className="text-xl font-semibold tracking-wide text-white hover:text-gray-300 transition-colors"
+          >
+            GRIP INVEST
           </Link>
-          
+
           {user ? (
-            <div className="flex items-center gap-6">
-              <Link href="/dashboard" className="hover:text-blue-200">Dashboard</Link>
-              <Link href="/products" className="hover:text-blue-200">Products</Link>
-              <Link href="/investments" className="hover:text-blue-200">Investments</Link>
-              <Link href="/logs" className="hover:text-blue-200">Logs</Link>
-              <Link href="/profile" className="hover:text-blue-200">Profile</Link>
-              <button 
+            <div className="flex items-center gap-8">
+              <Link 
+                href="/dashboard" 
+                className="text-sm font-medium text-gray-700 hover:text-black transition-colors"
+              >
+                Dashboard
+              </Link>
+              <Link 
+                href="/products" 
+                className="text-sm font-medium text-gray-700 hover:text-black transition-colors"
+              >
+                Products
+              </Link>
+              <Link 
+                href="/investments" 
+                className="text-sm font-medium text-gray-700 hover:text-black transition-colors"
+              >
+                Investments
+              </Link>
+              <Link 
+                href="/logs" 
+                className="text-sm font-medium text-gray-700 hover:text-black transition-colors"
+              >
+                Logs
+              </Link>
+              <Link 
+                href="/profile" 
+                className="text-sm font-medium text-gray-700 hover:text-black transition-colors"
+              >
+                Profile
+              </Link>
+              <button
                 onClick={handleLogout}
-                className="bg-blue-700 px-4 py-2 rounded hover:bg-blue-800"
+                className="bg-black text-white px-6 py-2.5 text-sm font-medium hover:bg-gray-800 transition-colors"
               >
                 Logout
               </button>
             </div>
           ) : (
             <div className="flex gap-4">
-              <Link href="/login" className="hover:text-blue-200">Login</Link>
-              <Link href="/signup" className="bg-blue-700 px-4 py-2 rounded hover:bg-blue-800">
+              <Link 
+                href="/login" 
+                className="text-sm font-medium text-white hover:text-gray-600 transition-colors px-4 py-2.5"
+              >
+                Login
+              </Link>
+              <Link 
+                href="/signup" 
+                className="text-sm font-medium text-white hover:text-gray-600 transition-colors px-4 py-2.5"
+              >
                 Sign Up
               </Link>
             </div>

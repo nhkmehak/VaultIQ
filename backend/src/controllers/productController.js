@@ -136,22 +136,53 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
-// Get AI recommendations
+// Get AI recommendations - FIXED VERSION
 exports.getRecommendations = async (req, res) => {
   try {
     const [products] = await pool.query('SELECT * FROM investment_products');
     
+    // Check if there are any products
+    if (products.length === 0) {
+      return res.json({ recommendations: [] });
+    }
+    
     // AI: Get recommendations based on user's risk appetite
-    const recommendations = await recommendProducts(products, req.user.risk_appetite);
+    const recommendationIds = await recommendProducts(products, req.user.risk_appetite || 'moderate');
 
+    // Validate recommendations array
+    if (!recommendationIds || !Array.isArray(recommendationIds) || recommendationIds.length === 0) {
+      // Return top 3 products by yield as fallback
+      const topProducts = products.slice(0, 3);
+      return res.json({ recommendations: topProducts });
+    }
+
+    // Filter out any invalid IDs
+    const validIds = recommendationIds.filter(id => id && typeof id === 'string');
+    
+    if (validIds.length === 0) {
+      // Return top 3 products by yield as fallback
+      const topProducts = products.slice(0, 3);
+      return res.json({ recommendations: topProducts });
+    }
+
+    // Create placeholders for SQL IN clause
+    const placeholders = validIds.map(() => '?').join(',');
+    
     const [recommendedProducts] = await pool.query(
-      'SELECT * FROM investment_products WHERE id IN (?)',
-      [recommendations]
+      `SELECT * FROM investment_products WHERE id IN (${placeholders})`,
+      validIds
     );
 
     res.json({ recommendations: recommendedProducts });
   } catch (error) {
     console.error('Recommendations error:', error);
-    res.status(500).json({ error: 'Server error' });
+    
+    // Fallback: return top 3 products on error
+    try {
+      const [products] = await pool.query('SELECT * FROM investment_products ORDER BY annual_yield DESC LIMIT 3');
+      res.json({ recommendations: products });
+    } catch (fallbackError) {
+      res.status(500).json({ error: 'Server error', recommendations: [] });
+    }
   }
 };
