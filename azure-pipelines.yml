@@ -1,0 +1,53 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  acrConnection: 'vault-acr-conn'
+  aksConnection: 'vault-aks-conn'
+  registryName: 'vaultregistry.azurecr.io'
+
+stages:
+  # STAGE 1: Build your backend and frontend code into Docker images
+  - stage: BuildAndPushStage
+    displayName: 'Stage 1: Build & Push Images'
+    jobs:
+      - job: BuildJob
+        steps:
+          # Build Backend v5
+          - task: Docker@2
+            displayName: 'Compile Backend Image'
+            inputs:
+              containerRegistry: '$(acrConnection)'
+              repository: 'vaultiq-backend'
+              command: 'buildAndPush'
+              Dockerfile: '**/backend/Dockerfile'
+              tags: 'v5'
+
+          # Build Frontend v5
+          - task: Docker@2
+            displayName: 'Compile Frontend Image'
+            inputs:
+              containerRegistry: '$(acrConnection)'
+              repository: 'vaultiq-frontend'
+              command: 'buildAndPush'
+              Dockerfile: '**/frontend/Dockerfile'
+              tags: 'v5'
+
+  # STAGE 2: Connect to your cluster and roll out the updates live
+  - stage: DeployToAKSStage
+    displayName: 'Stage 2: Deploy Live to AKS'
+    dependsOn: BuildAndPushStage 
+    jobs:
+      - job: DeployJob
+        steps:
+          - task: KubernetesManifest@1
+            displayName: 'Execute Kubernetes Deployment'
+            inputs:
+              action: 'deploy'
+              connectionType: 'kubernetesServiceConnection'
+              kubernetesServiceConnection: '$(aksConnection)'
+              manifests: |
+                $(System.DefaultWorkingDirectory)/vault-stack.yaml
