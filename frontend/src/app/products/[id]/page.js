@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '../../../context/AuthContext'; 
 import { useRouter, useParams } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api } from '../../../lib/api';
 import Link from 'next/link';
 
 export default function ProductDetail() {

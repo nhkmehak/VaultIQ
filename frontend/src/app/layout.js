@@ -1,6 +1,6 @@
 import './globals.css';
-import { AuthProvider } from '@/context/AuthContext';
-import Navbar from '@/components/Navbar';
+import { AuthProvider } from '../context/AuthContext';
+import Navbar from '../components/Navbar';
 
 export const metadata = {
   title: 'Grip Invest - Mini Investment Platform',

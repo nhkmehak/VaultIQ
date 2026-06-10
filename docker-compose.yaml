@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  vault-db:
+    image: mysql:8.0
+    container_name: vault-db
+    restart: always
+    env_file:
+      - ./backend/.env
+    environment:
+      MYSQL_ROOT_PASSWORD: Friv27mehak123@
+      MYSQL_DATABASE: gripinvest
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_storage:/var/lib/mysql
+    networks:
+      - vault-network
+
+  vault-be:
+    build: ./backend
+    container_name: vault-be
+    restart: always
+    env_file:
+      - ./backend/.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - vault-db
+    networks:
+      - vault-network
+
+  vault-fe:
+    build: ./frontend
+    container_name: vault-fe
+    restart: always
+    ports:
+      - "3000:3000"
+    networks:
+      - vault-network
+
+volumes:
+  db_storage:
+
+networks:
+  vault-network:
+    driver: bridge

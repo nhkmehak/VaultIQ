@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
@@ -29,19 +29,19 @@ export default function Navbar() {
             <div className="flex items-center gap-8">
               <Link 
                 href="/dashboard" 
-                className="text-sm font-medium text-gray-700 hover:text-black transition-colors"
+                className="text-sm font-medium text-gray-700 hover:text-white transition-colors"
               >
                 Dashboard
               </Link>
               <Link 
                 href="/products" 
-                className="text-sm font-medium text-gray-700 hover:text-black transition-colors"
+                className="text-sm font-medium text-gray-700 hover:text-white transition-colors"
               >
                 Products
               </Link>
               <Link 
                 href="/investments" 
-                className="text-sm font-medium text-gray-700 hover:text-black transition-colors"
+                className="text-sm font-medium text-gray-700 hover:text-white transition-colors"
               >
                 Investments
               </Link>

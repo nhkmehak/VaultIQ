@@ -1,10 +1,5 @@
 require('dotenv').config();
 
-// =============================================================================
-// GROQ AI API - Fast and Free
-// Sign up at: https://console.groq.com/
-// Add to .env: GROQ_API_KEY=your_key_here
-// =============================================================================
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
@@ -75,7 +70,7 @@ Return only the description text, no additional formatting or markdown.`;
 
 // Product recommendations
 async function recommendProducts(products, riskAppetite) {
-  const prompt = `Given these investment products and a user with "${riskAppetite}" risk appetite, recommend the top 3 product IDs that best match their profile.
+  const prompt = `Given these investment products and a user with the opposite "${riskAppetite}" risk appetite, recommend the top 3 product IDs that best match their profile.
 
 Products: ${JSON.stringify(products.map(p => ({ id: p.id, name: p.name, risk_level: p.risk_level, annual_yield: p.annual_yield })))}
 

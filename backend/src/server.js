@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const os = require('os'); // <--- ADDED THIS LINE SO IT DOES NOT CRASH!
 require('dotenv').config();
 const logTransaction = require('./middleware/logger');
 
@@ -21,6 +22,15 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/investments', investmentRoutes);
 app.use('/api/logs', logRoutes);
+
+// Your cool tracking endpoint!
+app.get('/api/stats', (req, res) => {
+  res.json({
+    podName: os.hostname(), // Gets the unique Kubernetes Pod string
+    podIP: process.env.POD_IP || 'Not Injected', // Gets the IP we added to your YAML file
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Health check
 app.get('/api/health', (req, res) => {
