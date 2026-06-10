@@ -127,7 +127,7 @@ spec:
 
         env:
         - name: NEXT_PUBLIC_API_URL
-          value: "http:/20.219.209.205:5000/api"
+          value: "http://20.219.209.205:5000/api"
 
         ports:
         - containerPort: 3000
