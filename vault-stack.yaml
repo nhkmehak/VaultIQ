@@ -78,7 +78,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: vaultregistry.azurecr.io/vaultiq-backend:v5
+        image: vaultregistry.azurecr.io/vaultiq-backend
 
         envFrom:
         - configMapRef:
@@ -123,7 +123,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: vaultregistry.azurecr.io/vaultiq-frontend:v3
+        image: vaultregistry.azurecr.io/vaultiq-frontend
 
         env:
         - name: NEXT_PUBLIC_API_URL

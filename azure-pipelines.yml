@@ -24,7 +24,7 @@ stages:
               repository: 'vaultiq-backend'
               command: 'buildAndPush'
               Dockerfile: '**/backend/Dockerfile'
-              tags: 'v5'
+              tags: '$(Build.BuildId)'
 
           # Build Frontend v5
           - task: Docker@2
@@ -34,7 +34,7 @@ stages:
               repository: 'vaultiq-frontend'
               command: 'buildAndPush'
               Dockerfile: '**/frontend/Dockerfile'
-              tags: 'v5'
+              tags: '$(Build.BuildId)'
 
   # STAGE 2: Connect to your cluster and roll out the updates live
   - stage: DeployToAKSStage
