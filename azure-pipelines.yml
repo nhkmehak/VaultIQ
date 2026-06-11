@@ -47,19 +47,21 @@ stages:
     jobs:
       - deployment: DeployStagingJob
         displayName: 'Execute Staging Deployment'
-        # 🟢 CRITICAL: This links your YAML to the portal gate you built for your friend
         environment: 'vault-staging' 
         strategy:
           runOnce:
             deploy:
               steps:
+                # 🟢 FIX: Downloads your repo files so the agent can see vault-stack.yaml
+                - checkout: self 
+
                 - task: KubernetesManifest@1
                   displayName: 'Deploy Manifests to Staging'
                   inputs:
                     action: 'deploy'
                     connectionType: 'kubernetesServiceConnection'
                     kubernetesServiceConnection: '$(aksConnection)'
-                    namespace: 'vault-staging-ns' # Keeps your files separate in K8s
+                    namespace: 'vault-staging-ns'
                     manifests: |
                       **/vault-stack.yaml
                     containers: |
@@ -71,23 +73,25 @@ stages:
   # =========================================================================
   - stage: DeployToProductionStage
     displayName: 'Stage 3: Deploy to Production'
-    dependsOn: DeployToStagingStage # 🟢 Ensures it only runs AFTER Staging succeeds
+    dependsOn: DeployToStagingStage 
     jobs:
       - deployment: DeployProductionJob
         displayName: 'Execute Production Deployment'
-        # 🟢 CRITICAL: This links your YAML to the portal gate you built for yourself
         environment: 'vault-production' 
         strategy:
           runOnce:
             deploy:
               steps:
+                # 🟢 FIX: Downloads your repo files so the agent can see vault-stack.yaml
+                - checkout: self 
+
                 - task: KubernetesManifest@1
                   displayName: 'Deploy Manifests to Production'
                   inputs:
                     action: 'deploy'
                     connectionType: 'kubernetesServiceConnection'
                     kubernetesServiceConnection: '$(aksConnection)'
-                    namespace: 'vault-prod-ns' # Keeps your production files safe and isolated
+                    namespace: 'vault-prod-ns'
                     manifests: |
                       **/vault-stack.yaml
                     containers: |
