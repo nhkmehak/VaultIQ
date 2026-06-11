@@ -61,7 +61,7 @@ stages:
                     kubernetesServiceConnection: '$(aksConnection)'
                     namespace: 'vault-staging-ns' # Keeps your files separate in K8s
                     manifests: |
-                      $(System.DefaultWorkingDirectory)/vault-stack.yaml
+                      **/vault-stack.yaml
                     containers: |
                       $(registryName)/vaultiq-backend:$(Build.BuildId)
                       $(registryName)/vaultiq-frontend:$(Build.BuildId)
@@ -89,7 +89,7 @@ stages:
                     kubernetesServiceConnection: '$(aksConnection)'
                     namespace: 'vault-prod-ns' # Keeps your production files safe and isolated
                     manifests: |
-                      $(System.DefaultWorkingDirectory)/vault-stack.yaml
+                      **/vault-stack.yaml
                     containers: |
                       $(registryName)/vaultiq-backend:$(Build.BuildId)
                       $(registryName)/vaultiq-frontend:$(Build.BuildId)
