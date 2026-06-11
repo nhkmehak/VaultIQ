@@ -6,7 +6,6 @@ pool:
 
 variables:
   acrConnection: 'vault-acr-conn'
-  aksConnection: 'vault-aks-conn'
   registryName: 'vaultregistry.azurecr.io'
 
 stages:
@@ -52,7 +51,6 @@ stages:
           runOnce:
             deploy:
               steps:
-                # 🟢 FIX: Downloads your repo files so the agent can see vault-stack.yaml
                 - checkout: self 
 
                 - task: KubernetesManifest@1
@@ -60,7 +58,7 @@ stages:
                   inputs:
                     action: 'deploy'
                     connectionType: 'kubernetesServiceConnection'
-                    kubernetesServiceConnection: '$(aksConnection)'
+                    kubernetesServiceConnection: 'vault-staging-conn' # 🟢 Connects to your staging room
                     namespace: 'vault-staging-ns'
                     manifests: |
                       **/vault-stack.yaml
@@ -82,7 +80,6 @@ stages:
           runOnce:
             deploy:
               steps:
-                # 🟢 FIX: Downloads your repo files so the agent can see vault-stack.yaml
                 - checkout: self 
 
                 - task: KubernetesManifest@1
@@ -90,7 +87,7 @@ stages:
                   inputs:
                     action: 'deploy'
                     connectionType: 'kubernetesServiceConnection'
-                    kubernetesServiceConnection: '$(aksConnection)'
+                    kubernetesServiceConnection: 'vault-prod-conn' # 🟢 Connects to your production room
                     namespace: 'vault-prod-ns'
                     manifests: |
                       **/vault-stack.yaml
