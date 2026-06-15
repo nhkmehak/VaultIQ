@@ -86,7 +86,6 @@ stages:
       BACKEND_REPLICAS: '1'
       FRONTEND_REPLICAS: '1'
       REGISTRY_NAME: 'vaultregistry.azurecr.io'
-      # ✅ FIXED: Added single quotes around dynamic variable evaluation
       BUILD_ID: '$(Build.BuildId)'
     jobs:
       - deployment: DeployStagingJob
@@ -100,12 +99,15 @@ stages:
                   artifact: deployment-files
                   displayName: 'Download deployment files'
 
+                # ✅ FIXED: Switched to custom pattern matching for #{VARIABLE}# layouts
                 - task: replacetokens@5
                   displayName: 'Fill staging values into templates'
                   inputs:
                     targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
                     encoding: 'auto'
-                    tokenPattern: 'azpipelines'
+                    tokenPattern: 'custom'
+                    tokenPrefix: '#{'
+                    tokenSuffix: '}#'
 
                 - task: Kubernetes@1
                   displayName: 'Login to Staging Cluster'
@@ -140,7 +142,6 @@ stages:
       BACKEND_REPLICAS: '1'
       FRONTEND_REPLICAS: '1'
       REGISTRY_NAME: 'vaultregistry.azurecr.io'
-      # ✅ FIXED: Added single quotes around dynamic variable evaluation
       BUILD_ID: '$(Build.BuildId)'
     jobs:
       - deployment: DeployProductionJob
@@ -154,12 +155,15 @@ stages:
                   artifact: deployment-files
                   displayName: 'Download deployment files'
 
+                # ✅ FIXED: Switched to custom pattern matching for #{VARIABLE}# layouts
                 - task: replacetokens@5
                   displayName: 'Fill prod values into templates'
                   inputs:
                     targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
                     encoding: 'auto'
-                    tokenPattern: 'azpipelines'
+                    tokenPattern: 'custom'
+                    tokenPrefix: '#{'
+                    tokenSuffix: '}#'
 
                 - task: Kubernetes@1
                   displayName: 'Login to Production Cluster'
