@@ -86,11 +86,8 @@ stages:
       BACKEND_REPLICAS: '1'
       FRONTEND_REPLICAS: '1'
       REGISTRY_NAME: 'vaultregistry.azurecr.io'
-      BUILD_ID: $(Build.BuildId)
-      # ✅ no nested variables
-      # REGISTRY_NAME and BUILD_ID are simple values
-      # replacetokens can resolve these correctly
-      # template uses #{REGISTRY_NAME}#/vaultiq-backend:#{BUILD_ID}#
+      # ✅ FIXED: Added single quotes around dynamic variable evaluation
+      BUILD_ID: '$(Build.BuildId)'
     jobs:
       - deployment: DeployStagingJob
         displayName: 'Execute Staging Deployment'
@@ -109,14 +106,6 @@ stages:
                     targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
                     encoding: 'auto'
                     tokenPattern: 'azpipelines'
-                  # replacetokens finds #{VARIABLE}# in all yaml files
-                  # replaces with pipeline variable values
-                  # #{REGISTRY_NAME}# → vaultregistry.azurecr.io
-                  # #{BUILD_ID}# → 202 (actual build number)
-                  # #{BACKEND_REPLICAS}# → 1
-                  # #{ENVIRONMENT}# → staging
-                  # #{BACKEND_URL}# → http://20.204.201.232:5000/api
-                  # no nested variables → replacetokens works correctly ✅
 
                 - task: Kubernetes@1
                   displayName: 'Login to Staging Cluster'
@@ -138,9 +127,6 @@ stages:
                 - script: |
                     kubectl apply -f $(Pipeline.Workspace)/deployment-files/templates/ -n vault-staging-ns
                   displayName: 'Deploy to Staging'
-                  # applies all yaml files in templates folder
-                  # replacetokens already filled all placeholders
-                  # no KubernetesManifest@1 bugs
 
   # =========================================================================
   # STAGE 3 - Deploy to Production
@@ -154,10 +140,8 @@ stages:
       BACKEND_REPLICAS: '1'
       FRONTEND_REPLICAS: '1'
       REGISTRY_NAME: 'vaultregistry.azurecr.io'
-      BUILD_ID: $(Build.BuildId)
-      # ✅ FIXED — removed nested BACKEND_IMAGE and FRONTEND_IMAGE
-      # same simple variables as staging
-      # only ENVIRONMENT and BACKEND_URL differ
+      # ✅ FIXED: Added single quotes around dynamic variable evaluation
+      BUILD_ID: '$(Build.BuildId)'
     jobs:
       - deployment: DeployProductionJob
         displayName: 'Execute Production Deployment'
@@ -176,11 +160,6 @@ stages:
                     targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
                     encoding: 'auto'
                     tokenPattern: 'azpipelines'
-                  # same as staging but:
-                  # #{ENVIRONMENT}# → prod
-                  # #{BACKEND_URL}# → http://PROD_IP_HERE:5000/api
-                  # #{BUILD_ID}# → same build number as staging
-                  # guarantees prod runs exactly what staging ran ✅
 
                 - task: Kubernetes@1
                   displayName: 'Login to Production Cluster'
