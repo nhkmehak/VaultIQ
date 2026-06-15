@@ -99,6 +99,13 @@ stages:
                   artifact: deployment-files
                   displayName: 'Download deployment files'
 
+                - script: |
+                    echo "=== All files in workspace ==="
+                    find $(Pipeline.Workspace) -type f
+                  displayName: 'Debug - List all files'
+                # ✅ TEMPORARY — shows exact paths of downloaded files
+                # remove after we confirm correct paths
+
                 - task: replacetokens@5
                   displayName: 'Fill staging values into templates'
                   inputs:
@@ -139,8 +146,6 @@ stages:
                     connectionType: 'kubernetesServiceConnection'
                     kubernetesServiceConnection: 'vault-staging-conn'
                     namespace: 'vault-staging-ns'
-                    # ✅ FIXED: Swapped to space-separated single strings on a single line. 
-                    # This completely bypasses the .trim() loop bug AND the sequence schema block error.
                     manifests: '$(Pipeline.Workspace)/deployment-files/templates/k8s-mysql.yaml $(Pipeline.Workspace)/deployment-files/templates/k8s-backend.yaml $(Pipeline.Workspace)/deployment-files/templates/k8s-frontend.yaml'
                     containers: '$(registryName)/vaultiq-backend:$(Build.BuildId) $(registryName)/vaultiq-frontend:$(Build.BuildId)'
 
@@ -209,6 +214,5 @@ stages:
                     connectionType: 'kubernetesServiceConnection'
                     kubernetesServiceConnection: 'vault-prod-conn'
                     namespace: 'vault-prod-ns'
-                    # ✅ FIXED: Swapped to space-separated single strings on a single line.
                     manifests: '$(Pipeline.Workspace)/deployment-files/templates/k8s-mysql.yaml $(Pipeline.Workspace)/deployment-files/templates/k8s-backend.yaml $(Pipeline.Workspace)/deployment-files/templates/k8s-frontend.yaml'
                     containers: '$(registryName)/vaultiq-backend:$(Build.BuildId) $(registryName)/vaultiq-frontend:$(Build.BuildId)'
