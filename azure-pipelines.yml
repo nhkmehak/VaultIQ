@@ -139,13 +139,10 @@ stages:
                     connectionType: 'kubernetesServiceConnection'
                     kubernetesServiceConnection: 'vault-staging-conn'
                     namespace: 'vault-staging-ns'
-                    manifests: |
-                      $(Pipeline.Workspace)/deployment-files/templates/k8s-mysql.yaml
-                      $(Pipeline.Workspace)/deployment-files/templates/k8s-backend.yaml
-                      $(Pipeline.Workspace)/deployment-files/templates/k8s-frontend.yaml
-                    containers: |
-                      $(registryName)/vaultiq-backend:$(Build.BuildId)
-                      $(registryName)/vaultiq-frontend:$(Build.BuildId)
+                    # ✅ FIXED: Swapped to space-separated single strings on a single line. 
+                    # This completely bypasses the .trim() loop bug AND the sequence schema block error.
+                    manifests: '$(Pipeline.Workspace)/deployment-files/templates/k8s-mysql.yaml $(Pipeline.Workspace)/deployment-files/templates/k8s-backend.yaml $(Pipeline.Workspace)/deployment-files/templates/k8s-frontend.yaml'
+                    containers: '$(registryName)/vaultiq-backend:$(Build.BuildId) $(registryName)/vaultiq-frontend:$(Build.BuildId)'
 
   # =========================================================================
   # STAGE 3 - Deploy to Production
@@ -212,10 +209,6 @@ stages:
                     connectionType: 'kubernetesServiceConnection'
                     kubernetesServiceConnection: 'vault-prod-conn'
                     namespace: 'vault-prod-ns'
-                    manifests: |
-                      $(Pipeline.Workspace)/deployment-files/templates/k8s-mysql.yaml
-                      $(Pipeline.Workspace)/deployment-files/templates/k8s-backend.yaml
-                      $(Pipeline.Workspace)/deployment-files/templates/k8s-frontend.yaml
-                    containers: |
-                      $(registryName)/vaultiq-backend:$(Build.BuildId)
-                      $(registryName)/vaultiq-frontend:$(Build.BuildId)
+                    # ✅ FIXED: Swapped to space-separated single strings on a single line.
+                    manifests: '$(Pipeline.Workspace)/deployment-files/templates/k8s-mysql.yaml $(Pipeline.Workspace)/deployment-files/templates/k8s-backend.yaml $(Pipeline.Workspace)/deployment-files/templates/k8s-frontend.yaml'
+                    containers: '$(registryName)/vaultiq-backend:$(Build.BuildId) $(registryName)/vaultiq-frontend:$(Build.BuildId)'
