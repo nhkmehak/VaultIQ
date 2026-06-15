@@ -30,10 +30,10 @@ spec:
         env:
         - name: MYSQL_ROOT_PASSWORD
           valueFrom:
-            configMapKeyRef:
-              name: vaultiq-backend-env
+            secretKeyRef:
+              name: vaultiq-secret
               key: DB_PASSWORD
-        - name: MYSQL_DATABASE
+        - name: MYSQL_DATABASE        
           valueFrom:
             configMapKeyRef:
               name: vaultiq-backend-env
@@ -67,7 +67,7 @@ kind: Deployment
 metadata:
   name: vaultiq-backend-deployment
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: vaultiq-backend
@@ -79,17 +79,16 @@ spec:
       containers:
       - name: backend
         image: vaultregistry.azurecr.io/vaultiq-backend
-
         envFrom:
         - configMapRef:
             name: vaultiq-backend-env
-
+        - secretRef:
+            name: vaultiq-secret
         env:
         - name: POD_IP
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
-
         ports:
         - containerPort: 5000
 
@@ -124,11 +123,12 @@ spec:
       containers:
       - name: frontend
         image: vaultregistry.azurecr.io/vaultiq-frontend
-
         env:
         - name: NEXT_PUBLIC_API_URL
-          value: "http://20.219.209.205:5000/api"
-
+          valueFrom:
+            configMapKeyRef:
+              name: vaultiq-backend-env
+              key: BACKEND_URL
         ports:
         - containerPort: 3000
 
