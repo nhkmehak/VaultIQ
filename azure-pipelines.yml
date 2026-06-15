@@ -1,3 +1,10 @@
+resources:
+  repositories:
+    - repository: deployments
+      type: github
+      name: nhkmehak/vaultiq-deployments
+      connection: nhkmehak
+
 trigger:
   - main
 
@@ -23,9 +30,7 @@ stages:
           - checkout: self
             # checks out your app repo (gripinvest)
 
-          - checkout: github
-            repository: nhkmehak/vaultiq-deployments
-            connection: nhkmehak
+          - checkout: deployments
             path: deployment-repo
 
           - task: npmAuthenticate@0
