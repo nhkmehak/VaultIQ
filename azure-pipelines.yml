@@ -29,18 +29,19 @@ stages:
         steps:
           - checkout: self
             path: gripinvest
-            # ✅ added path so folder name is predictable
 
           - checkout: deployments
             path: deployment-repo
 
+          # Fixed: Swapped to absolute Agent Build Directory so the runner finds .npmrc
           - task: npmAuthenticate@0
             displayName: 'Authenticate npm with Azure Artifacts Feed'
             inputs:
-              workingFile: 'gripinvest/backend/.npmrc'
+              workingFile: '$(Agent.BuildDirectory)/gripinvest/backend/.npmrc'
 
+          # Fixed: Swapped to absolute Agent Build Directory path for the cat command
           - script: |
-              TOKEN=$(cat gripinvest/backend/.npmrc | grep _authToken | cut -d'=' -f2)
+              TOKEN=$(cat $(Agent.BuildDirectory)/gripinvest/backend/.npmrc | grep _authToken | cut -d'=' -f2)
               echo "##vso[task.setvariable variable=NPM_TOKEN]$TOKEN"
             displayName: 'Extract npm token'
 
@@ -50,7 +51,7 @@ stages:
               containerRegistry: '$(acrConnection)'
               repository: 'vaultiq-backend'
               command: 'build'
-              Dockerfile: 'gripinvest/backend/Dockerfile'
+              Dockerfile: '$(Agent.BuildDirectory)/gripinvest/backend/Dockerfile'
               tags: '$(Build.BuildId)'
               arguments: '--build-arg NPM_TOKEN=$(NPM_TOKEN)'
 
@@ -68,10 +69,11 @@ stages:
               containerRegistry: '$(acrConnection)'
               repository: 'vaultiq-frontend'
               command: 'buildAndPush'
-              Dockerfile: 'gripinvest/frontend/Dockerfile'
+              Dockerfile: '$(Agent.BuildDirectory)/gripinvest/frontend/Dockerfile'
               tags: '$(Build.BuildId)'
 
-          - publish: $(Pipeline.Workspace)/deployment-repo
+          # Fixed: Published deployment-repo via the explicit $(Agent.BuildDirectory) path
+          - publish: $(Agent.BuildDirectory)/deployment-repo
             artifact: deployment-files
             displayName: 'Publish deployment repo as artifact'
 
@@ -82,7 +84,6 @@ stages:
     displayName: 'Stage 2 - Deploy to Staging'
     dependsOn: BuildAndPushStage
     variables:
-      # ✅ staging specific values declared here at stage level
       ENVIRONMENT: 'staging'
       BACKEND_URL: 'http://20.204.201.232:5000/api'
       BACKEND_IMAGE: '$(registryName)/vaultiq-backend:$(Build.BuildId)'
@@ -107,8 +108,6 @@ stages:
                     targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
                     encoding: 'auto'
                     tokenPattern: 'azpipelines'
-                    # ✅ automatically picks up stage level variables above
-                    # replaces #{ENVIRONMENT}#, #{BACKEND_URL}# etc
 
                 - task: Kubernetes@1
                   displayName: 'Login to Staging Cluster'
@@ -118,11 +117,12 @@ stages:
                     namespace: 'vault-staging-ns'
                     command: 'login'
 
+                # Fixed: Changed variable expansions to use underscores (e.g. $(DB_PASSWORD))
                 - script: |
                     kubectl create secret generic vaultiq-secret \
-                      --from-literal=DB_PASSWORD=$(DB-PASSWORD) \
-                      --from-literal=JWT_SECRET=$(JWT-SECRET) \
-                      --from-literal=GROQ_API_KEY=$(GROQ-API-KEY) \
+                      --from-literal=DB_PASSWORD=$(DB_PASSWORD) \
+                      --from-literal=JWT_SECRET=$(JWT_SECRET) \
+                      --from-literal=GROQ_API_KEY=$(GROQ_API_KEY) \
                       --namespace=vault-staging-ns \
                       --dry-run=client -o yaml | kubectl apply -f -
                   displayName: 'Create K8s Secret in Staging'
@@ -159,7 +159,6 @@ stages:
     displayName: 'Stage 3 - Deploy to Production'
     dependsOn: DeployToStagingStage
     variables:
-      # ✅ prod specific values — same variable names, different values
       ENVIRONMENT: 'prod'
       BACKEND_URL: 'http://PROD_IP_HERE:5000/api'
       BACKEND_IMAGE: '$(registryName)/vaultiq-backend:$(Build.BuildId)'
@@ -184,8 +183,6 @@ stages:
                     targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
                     encoding: 'auto'
                     tokenPattern: 'azpipelines'
-                    # ✅ same task, same templates
-                    # but now picks up prod stage variables above
 
                 - task: Kubernetes@1
                   displayName: 'Login to Production Cluster'
@@ -195,11 +192,12 @@ stages:
                     namespace: 'vault-prod-ns'
                     command: 'login'
 
+                # Fixed: Changed variable expansions to use underscores (e.g. $(DB_PASSWORD))
                 - script: |
                     kubectl create secret generic vaultiq-secret \
-                      --from-literal=DB_PASSWORD=$(DB-PASSWORD) \
-                      --from-literal=JWT_SECRET=$(JWT-SECRET) \
-                      --from-literal=GROQ_API_KEY=$(GROQ-API-KEY) \
+                      --from-literal=DB_PASSWORD=$(DB_PASSWORD) \
+                      --from-literal=JWT_SECRET=$(JWT_SECRET) \
+                      --from-literal=GROQ_API_KEY=$(GROQ_API_KEY) \
                       --namespace=vault-prod-ns \
                       --dry-run=client -o yaml | kubectl apply -f -
                   displayName: 'Create K8s Secret in Production'
