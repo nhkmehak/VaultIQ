@@ -139,14 +139,13 @@ stages:
                     connectionType: 'kubernetesServiceConnection'
                     kubernetesServiceConnection: 'vault-staging-conn'
                     namespace: 'vault-staging-ns'
-                    # ✅ FIXED: Converted multi-line text blocks to explicit array listings to prevent .trim() failures
-                    manifests:
-                      - '$(Pipeline.Workspace)/deployment-files/templates/k8s-mysql.yaml'
-                      - '$(Pipeline.Workspace)/deployment-files/templates/k8s-backend.yaml'
-                      - '$(Pipeline.Workspace)/deployment-files/templates/k8s-frontend.yaml'
-                    containers:
-                      - '$(registryName)/vaultiq-backend:$(Build.BuildId)'
-                      - '$(registryName)/vaultiq-frontend:$(Build.BuildId)'
+                    manifests: |
+                      $(Pipeline.Workspace)/deployment-files/templates/k8s-mysql.yaml
+                      $(Pipeline.Workspace)/deployment-files/templates/k8s-backend.yaml
+                      $(Pipeline.Workspace)/deployment-files/templates/k8s-frontend.yaml
+                    containers: |
+                      $(registryName)/vaultiq-backend:$(Build.BuildId)
+                      $(registryName)/vaultiq-frontend:$(Build.BuildId)
 
   # =========================================================================
   # STAGE 3 - Deploy to Production
@@ -213,11 +212,10 @@ stages:
                     connectionType: 'kubernetesServiceConnection'
                     kubernetesServiceConnection: 'vault-prod-conn'
                     namespace: 'vault-prod-ns'
-                    # ✅ FIXED: Converted multi-line text blocks to explicit array listings to prevent .trim() failures
-                    manifests:
-                      - '$(Pipeline.Workspace)/deployment-files/templates/k8s-mysql.yaml'
-                      - '$(Pipeline.Workspace)/deployment-files/templates/k8s-backend.yaml'
-                      - '$(Pipeline.Workspace)/deployment-files/templates/k8s-frontend.yaml'
-                    containers:
-                      - '$(registryName)/vaultiq-backend:$(Build.BuildId)'
-                      - '$(registryName)/vaultiq-frontend:$(Build.BuildId)'
+                    manifests: |
+                      $(Pipeline.Workspace)/deployment-files/templates/k8s-mysql.yaml
+                      $(Pipeline.Workspace)/deployment-files/templates/k8s-backend.yaml
+                      $(Pipeline.Workspace)/deployment-files/templates/k8s-frontend.yaml
+                    containers: |
+                      $(registryName)/vaultiq-backend:$(Build.BuildId)
+                      $(registryName)/vaultiq-frontend:$(Build.BuildId)
