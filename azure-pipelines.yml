@@ -99,17 +99,21 @@ stages:
                   artifact: deployment-files
                   displayName: 'Download deployment files'
 
-                - script: |
-                    echo "=== All files in workspace ==="
-                    find $(Pipeline.Workspace) -type f
-                  displayName: 'Debug - List all files'
-
                 - task: replacetokens@5
                   displayName: 'Fill staging values into templates'
                   inputs:
                     targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
                     encoding: 'auto'
                     tokenPattern: 'azpipelines'
+                  # replacetokens reads all *.yaml files in templates folder
+                  # finds #{VARIABLE_NAME}# placeholders
+                  # replaces with actual pipeline variable values:
+                  # #{BACKEND_IMAGE}# → vaultregistry.azurecr.io/vaultiq-backend:202
+                  # #{BACKEND_REPLICAS}# → 1
+                  # #{ENVIRONMENT}# → staging
+                  # #{BACKEND_URL}# → http://20.204.201.232:5000/api
+                  # files are modified in place on pipeline VM
+                  # ready to apply to cluster
 
                 - task: Kubernetes@1
                   displayName: 'Login to Staging Cluster'
@@ -118,6 +122,8 @@ stages:
                     kubernetesServiceEndpoint: 'vault-staging-conn'
                     namespace: 'vault-staging-ns'
                     command: 'login'
+                  # sets up kubeconfig on pipeline VM
+                  # kubectl commands in next steps can now talk to cluster
 
                 - script: |
                     kubectl create secret generic vaultiq-secret \
@@ -127,22 +133,19 @@ stages:
                       --namespace=vault-staging-ns \
                       --dry-run=client -o yaml | kubectl apply -f -
                   displayName: 'Create K8s Secret in Staging'
+                  # creates vaultiq-secret in staging namespace
+                  # values come from Variable Group (encrypted)
+                  # dry-run | apply pattern → safe to rerun
 
-                - task: KubernetesManifest@1
+                - script: |
+                    kubectl apply -f $(Pipeline.Workspace)/deployment-files/templates/ -n vault-staging-ns
                   displayName: 'Deploy to Staging'
-                  inputs:
-                    action: 'deploy'
-                    connectionType: 'kubernetesServiceConnection'
-                    kubernetesServiceConnection: 'vault-staging-conn'
-                    namespace: 'vault-staging-ns'
-                    manifests: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
-                    # ✅ CHANGED — wildcard picks all yaml files in folder
-                    # no space-separated list → no trim bug
-                    # no multiline → no schema error
-                    # applies all 4 files automatically including configmap
-                    containers: |
-                      $(registryName)/vaultiq-backend:$(Build.BuildId)
-                      $(registryName)/vaultiq-frontend:$(Build.BuildId)
+                  # ✅ CHANGED — kubectl apply directly instead of KubernetesManifest@1
+                  # -f <folder> → applies ALL yaml files in templates folder
+                  # replacetokens already filled in:
+                  #   image tags, replicas, environment, backend URL
+                  # no wildcard bug, no trim bug, no path issues
+                  # -n vault-staging-ns → all resources go to staging namespace
 
   # =========================================================================
   # STAGE 3 - Deploy to Production
@@ -175,6 +178,11 @@ stages:
                     targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
                     encoding: 'auto'
                     tokenPattern: 'azpipelines'
+                  # same as staging but different variable values:
+                  # #{ENVIRONMENT}# → prod
+                  # #{BACKEND_URL}# → http://PROD_IP_HERE:5000/api
+                  # #{BACKEND_IMAGE}# → same image as staging (built once, deployed twice)
+                  # this guarantees prod runs EXACTLY what staging ran ✅
 
                 - task: Kubernetes@1
                   displayName: 'Login to Production Cluster'
@@ -193,15 +201,9 @@ stages:
                       --dry-run=client -o yaml | kubectl apply -f -
                   displayName: 'Create K8s Secret in Production'
 
-                - task: KubernetesManifest@1
+                - script: |
+                    kubectl apply -f $(Pipeline.Workspace)/deployment-files/templates/ -n vault-prod-ns
                   displayName: 'Deploy to Production'
-                  inputs:
-                    action: 'deploy'
-                    connectionType: 'kubernetesServiceConnection'
-                    kubernetesServiceConnection: 'vault-prod-conn'
-                    namespace: 'vault-prod-ns'
-                    manifests: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
-                    # ✅ same wildcard fix for prod
-                    containers: |
-                      $(registryName)/vaultiq-backend:$(Build.BuildId)
-                      $(registryName)/vaultiq-frontend:$(Build.BuildId)
+                  # same as staging but prod namespace
+                  # prod gets identical images to staging ✅
+                  # only BACKEND_URL and ENVIRONMENT differ
