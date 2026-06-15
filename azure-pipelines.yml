@@ -28,7 +28,8 @@ stages:
       - job: BuildJob
         steps:
           - checkout: self
-            # checks out your app repo (gripinvest)
+            path: gripinvest
+            # ✅ added path so folder name is predictable
 
           - checkout: deployments
             path: deployment-repo
@@ -73,10 +74,6 @@ stages:
           - publish: $(Pipeline.Workspace)/deployment-repo
             artifact: deployment-files
             displayName: 'Publish deployment repo as artifact'
-            # publishes your NEW deployment repo
-            # contains templates/ staging/ prod/
-            # frozen at this exact commit
-            # deploy stages download this
 
   # =========================================================================
   # STAGE 2 - Deploy to Staging
@@ -84,6 +81,14 @@ stages:
   - stage: DeployToStagingStage
     displayName: 'Stage 2 - Deploy to Staging'
     dependsOn: BuildAndPushStage
+    variables:
+      # ✅ staging specific values declared here at stage level
+      ENVIRONMENT: 'staging'
+      BACKEND_URL: 'http://20.204.201.232:5000/api'
+      BACKEND_IMAGE: '$(registryName)/vaultiq-backend:$(Build.BuildId)'
+      FRONTEND_IMAGE: '$(registryName)/vaultiq-frontend:$(Build.BuildId)'
+      BACKEND_REPLICAS: '1'
+      FRONTEND_REPLICAS: '1'
     jobs:
       - deployment: DeployStagingJob
         displayName: 'Execute Staging Deployment'
@@ -95,7 +100,6 @@ stages:
                 - download: current
                   artifact: deployment-files
                   displayName: 'Download deployment files'
-                  # downloads your templates + values files
 
                 - task: replacetokens@5
                   displayName: 'Fill staging values into templates'
@@ -103,18 +107,8 @@ stages:
                     targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
                     encoding: 'auto'
                     tokenPattern: 'azpipelines'
-                    # looks for #{PLACEHOLDER}# in all template files
-                    # replaces with values from variables below
-                  env:
-                    ENVIRONMENT: staging
-                    BACKEND_URL: "http://20.204.201.232:5000/api"
-                    BACKEND_IMAGE: "$(registryName)/vaultiq-backend:$(Build.BuildId)"
-                    FRONTEND_IMAGE: "$(registryName)/vaultiq-frontend:$(Build.BuildId)"
-                    BACKEND_REPLICAS: "1"
-                    FRONTEND_REPLICAS: "1"
-                  # these values come from staging/values.yaml concept
-                  # but passed as env variables here so pipeline fills them in
-                  # Build.BuildId ensures exact image from THIS build is used
+                    # ✅ automatically picks up stage level variables above
+                    # replaces #{ENVIRONMENT}#, #{BACKEND_URL}# etc
 
                 - task: Kubernetes@1
                   displayName: 'Login to Staging Cluster'
@@ -142,8 +136,6 @@ stages:
                     namespace: 'vault-staging-ns'
                     manifests: |
                       $(Pipeline.Workspace)/deployment-files/templates/configmap.yaml
-                    # uses the template AFTER placeholders were filled
-                    # BACKEND_URL is now the real staging URL
 
                 - task: KubernetesManifest@1
                   displayName: 'Deploy to Staging'
@@ -166,6 +158,14 @@ stages:
   - stage: DeployToProductionStage
     displayName: 'Stage 3 - Deploy to Production'
     dependsOn: DeployToStagingStage
+    variables:
+      # ✅ prod specific values — same variable names, different values
+      ENVIRONMENT: 'prod'
+      BACKEND_URL: 'http://PROD_IP_HERE:5000/api'
+      BACKEND_IMAGE: '$(registryName)/vaultiq-backend:$(Build.BuildId)'
+      FRONTEND_IMAGE: '$(registryName)/vaultiq-frontend:$(Build.BuildId)'
+      BACKEND_REPLICAS: '1'
+      FRONTEND_REPLICAS: '1'
     jobs:
       - deployment: DeployProductionJob
         displayName: 'Execute Production Deployment'
@@ -184,15 +184,8 @@ stages:
                     targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
                     encoding: 'auto'
                     tokenPattern: 'azpipelines'
-                  env:
-                    ENVIRONMENT: prod
-                    BACKEND_URL: "http://PROD_IP_HERE:5000/api"
-                    BACKEND_IMAGE: "$(registryName)/vaultiq-backend:$(Build.BuildId)"
-                    FRONTEND_IMAGE: "$(registryName)/vaultiq-frontend:$(Build.BuildId)"
-                    BACKEND_REPLICAS: "1"
-                    FRONTEND_REPLICAS: "1"
-                  # same template files
-                  # different values → prod URL, prod environment label
+                    # ✅ same task, same templates
+                    # but now picks up prod stage variables above
 
                 - task: Kubernetes@1
                   displayName: 'Login to Production Cluster'
@@ -220,8 +213,6 @@ stages:
                     namespace: 'vault-prod-ns'
                     manifests: |
                       $(Pipeline.Workspace)/deployment-files/templates/configmap.yaml
-                    # same configmap template
-                    # but now filled with prod BACKEND_URL
 
                 - task: KubernetesManifest@1
                   displayName: 'Deploy to Production'
