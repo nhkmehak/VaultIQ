@@ -1,270 +1,270 @@
-  trigger:
-    - main
+trigger:
+  - main
 
-  pool:
-    vmImage: 'ubuntu-latest'
+pool:
+  vmImage: 'ubuntu-latest'
 
-  variables:
-    - group: vaultiq-secrets
-    # links Variable Group
-    # makes $(DB-PASSWORD), $(JWT-SECRET), $(GROQ-API-KEY) available
-    # these are encrypted — never visible in logs
+variables:
+  - group: vaultiq-secrets
+  # links Variable Group
+  # makes $(DB-PASSWORD), $(JWT-SECRET), $(GROQ-API-KEY) available
+  # these are encrypted — never visible in logs
 
-    - name: acrConnection
-      value: 'vault-acr-conn'
-    # name of ACR service connection
-    # used by Docker task to authenticate and push images
+  - name: acrConnection
+    value: 'vault-acr-conn'
+  # name of ACR service connection
+  # used by Docker task to authenticate and push images
 
-    - name: registryName
-      value: 'vaultregistry.azurecr.io'
-    # your ACR URL
-    # used to reference exact image versions in deployment
+  - name: registryName
+    value: 'vaultregistry.azurecr.io'
+  # your ACR URL
+  # used to reference exact image versions in deployment
 
-  stages:
-    # =========================================================================
-    # STAGE 1: Build & Push Images
-    # =========================================================================
-    - stage: BuildAndPushStage
-      displayName: 'Stage 1: Build & Push Images'
-      jobs:
-        - job: BuildJob
-          steps:
-            - checkout: self
-            # gets your code from repo onto pipeline VM
-            # only done here — deploy stages never checkout
-            # prevents code drift between build and deploy
+stages:
+  # =========================================================================
+  # STAGE 1: Build & Push Images
+  # =========================================================================
+  - stage: BuildAndPushStage
+    displayName: 'Stage 1: Build & Push Images'
+    jobs:
+      - job: BuildJob
+        steps:
+          - checkout: self
+          # gets your code from repo onto pipeline VM
+          # only done here — deploy stages never checkout
+          # prevents code drift between build and deploy
 
-            - task: npmAuthenticate@0
-              displayName: 'Authenticate npm with Azure Artifacts Feed'
-              inputs:
-                workingFile: 'backend/.npmrc'
-              # reads backend/.npmrc which has your feed URL
-              # injects temporary authentication token into it
-              # token comes from pipeline's own Azure DevOps identity
-              # valid only for this pipeline run
+          - task: npmAuthenticate@0
+            displayName: 'Authenticate npm with Azure Artifacts Feed'
+            inputs:
+              workingFile: 'backend/.npmrc'
+            # reads backend/.npmrc which has your feed URL
+            # injects temporary authentication token into it
+            # token comes from pipeline's own Azure DevOps identity
+            # valid only for this pipeline run
 
-            - script: |
-                TOKEN=$(cat backend/.npmrc | grep "_authToken" | cut -d'=' -f2)
-                echo "##vso[task.setvariable variable=NPM_TOKEN]$TOKEN"
-              displayName: 'Extract npm token'
-              # cat backend/.npmrc → reads the file npmAuthenticate just updated
-              # grep "_authToken" → finds the line containing the token
-              # cut -d'=' -f2 → splits by = and takes second part (actual token value)
-              # ##vso[task.setvariable variable=NPM_TOKEN] → Azure DevOps special syntax
-              # sets pipeline variable NPM_TOKEN
-              # now $(NPM_TOKEN) is available in next steps
+          - script: |
+              TOKEN=$(cat backend/.npmrc | grep "_authToken" | cut -d'=' -f2)
+              echo "##vso[task.setvariable variable=NPM_TOKEN]$TOKEN"
+            displayName: 'Extract npm token'
+            # cat backend/.npmrc → reads the file npmAuthenticate just updated
+            # grep "_authToken" → finds the line containing the token
+            # cut -d'=' -f2 → splits by = and takes second part (actual token value)
+            # ##vso[task.setvariable variable=NPM_TOKEN] → Azure DevOps special syntax
+            # sets pipeline variable NPM_TOKEN
+            # now $(NPM_TOKEN) is available in next steps
 
-            - task: Docker@2
-              displayName: 'Build Backend Image'
-              inputs:
-                containerRegistry: '$(acrConnection)'
-                repository: 'vaultiq-backend'
-                command: 'build'
-                # ✅ CHANGED from buildAndPush to build only
-                # buildAndPush does not support arguments input
-                # so --build-arg was being ignored → token never reached Docker
-                # build command supports arguments ✅
-                Dockerfile: '**/backend/Dockerfile'
-                tags: '$(Build.BuildId)'
-                arguments: '--build-arg NPM_TOKEN=$(NPM_TOKEN)'
-                # --build-arg passes NPM_TOKEN into Docker build environment
-                # Dockerfile receives it as ARG NPM_TOKEN
-                # used to create .npmrc inside container with real token
-                # $(NPM_TOKEN) replaced with actual token value by pipeline
+          - task: Docker@2
+            displayName: 'Build Backend Image'
+            inputs:
+              containerRegistry: '$(acrConnection)'
+              repository: 'vaultiq-backend'
+              command: 'build'
+              # ✅ CHANGED from buildAndPush to build only
+              # buildAndPush does not support arguments input
+              # so --build-arg was being ignored → token never reached Docker
+              # build command supports arguments ✅
+              Dockerfile: '**/backend/Dockerfile'
+              tags: '$(Build.BuildId)'
+              arguments: '--build-arg NPM_TOKEN=$(NPM_TOKEN)'
+              # --build-arg passes NPM_TOKEN into Docker build environment
+              # Dockerfile receives it as ARG NPM_TOKEN
+              # used to create .npmrc inside container with real token
+              # $(NPM_TOKEN) replaced with actual token value by pipeline
 
-            - task: Docker@2
-              displayName: 'Push Backend Image'
-              inputs:
-                containerRegistry: '$(acrConnection)'
-                repository: 'vaultiq-backend'
-                command: 'push'
-                # ✅ ADDED separate push step
-                # after build completes → push image to ACR
-                # split into two steps because build needs arguments
-                # push does not need arguments
-                tags: '$(Build.BuildId)'
+          - task: Docker@2
+            displayName: 'Push Backend Image'
+            inputs:
+              containerRegistry: '$(acrConnection)'
+              repository: 'vaultiq-backend'
+              command: 'push'
+              # ✅ ADDED separate push step
+              # after build completes → push image to ACR
+              # split into two steps because build needs arguments
+              # push does not need arguments
+              tags: '$(Build.BuildId)'
 
-            - task: Docker@2
-              displayName: 'Build and Push Frontend Image'
-              inputs:
-                containerRegistry: '$(acrConnection)'
-                repository: 'vaultiq-frontend'
-                command: 'buildAndPush'
-                # frontend stays as buildAndPush
-                # frontend has no Azure Artifacts feed dependency
-                # uses public npm packages directly — no auth needed
-                # no --build-arg needed here
-                Dockerfile: '**/frontend/Dockerfile'
-                tags: '$(Build.BuildId)'
+          - task: Docker@2
+            displayName: 'Build and Push Frontend Image'
+            inputs:
+              containerRegistry: '$(acrConnection)'
+              repository: 'vaultiq-frontend'
+              command: 'buildAndPush'
+              # frontend stays as buildAndPush
+              # frontend has no Azure Artifacts feed dependency
+              # uses public npm packages directly — no auth needed
+              # no --build-arg needed here
+              Dockerfile: '**/frontend/Dockerfile'
+              tags: '$(Build.BuildId)'
 
-            - publish: $(System.DefaultWorkingDirectory)/k8s
-              artifact: k8s-manifests
-              displayName: 'Publish k8s folder as artifact'
-            # publishes entire k8s/ folder as pipeline artifact
-            # contains: vault-stack.yaml, configmap-staging.yaml, configmap-prod.yaml
-            # frozen at this exact commit
-            # deploy stages download this — not live repo
-            # guarantees build and deploy use identical files
+          - publish: $(System.DefaultWorkingDirectory)/k8s
+            artifact: k8s-manifests
+            displayName: 'Publish k8s folder as artifact'
+          # publishes entire k8s/ folder as pipeline artifact
+          # contains: vault-stack.yaml, configmap-staging.yaml, configmap-prod.yaml
+          # frozen at this exact commit
+          # deploy stages download this — not live repo
+          # guarantees build and deploy use identical files
 
-    # =========================================================================
-    # STAGE 2: Deploy to Staging
-    # =========================================================================
-    - stage: DeployToStagingStage
-      displayName: 'Stage 2: Deploy to Staging'
-      dependsOn: BuildAndPushStage
-      # only starts after build stage succeeds
-      # if build fails → staging never runs
-      jobs:
-        - deployment: DeployStagingJob
-          displayName: 'Execute Staging Deployment'
-          environment: 'vault-staging'
-          # links to Azure DevOps environment
-          # approval gates configured here
-          # deployment history tracked here
-          strategy:
-            runOnce:
-              deploy:
-                steps:
-                  - download: current
-                    artifact: k8s-manifests
-                    displayName: 'Download k8s artifact'
-                  # downloads frozen k8s/ folder from build stage
-                  # files land at: $(Pipeline.Workspace)/k8s-manifests/
-                  # exact same files as build stage saw — no drift
+  # =========================================================================
+  # STAGE 2: Deploy to Staging
+  # =========================================================================
+  - stage: DeployToStagingStage
+    displayName: 'Stage 2: Deploy to Staging'
+    dependsOn: BuildAndPushStage
+    # only starts after build stage succeeds
+    # if build fails → staging never runs
+    jobs:
+      - deployment: DeployStagingJob
+        displayName: 'Execute Staging Deployment'
+        environment: 'vault-staging'
+        # links to Azure DevOps environment
+        # approval gates configured here
+        # deployment history tracked here
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: k8s-manifests
+                  displayName: 'Download k8s artifact'
+                # downloads frozen k8s/ folder from build stage
+                # files land at: $(Pipeline.Workspace)/k8s-manifests/
+                # exact same files as build stage saw — no drift
 
-                  - task: Kubernetes@1
-                    displayName: 'Login to Staging Cluster'
-                    inputs:
-                      connectionType: 'vault-staging-conn'
-                      kubernetesServiceConnection: 'vault-staging-conn'
-                      namespace: 'vault-staging-ns'
-                      command: 'login'
-                  # sets up kubeconfig on pipeline VM
-                  # required so next script step can run kubectl commands
-                  # vault-staging-conn authenticates to staging namespace
+                - task: Kubernetes@1
+                  displayName: 'Login to Staging Cluster'
+                  inputs:
+                    connectionType: 'kubernetesServiceConnection'   # ✅ FIXED
+                    kubernetesServiceEndpoint: 'vault-staging-conn' # ✅ FIXED
+                    namespace: 'vault-staging-ns'
+                    command: 'login'
+                # sets up kubeconfig on pipeline VM
+                # required so next script step can run kubectl commands
+                # vault-staging-conn authenticates to staging namespace
 
-                  - task: Kubernetes@1
-                    displayName: 'Apply ConfigMap to Staging'
-                    inputs:
-                      connectionType: 'kubernetesServiceConnection'
-                      kubernetesServiceEndpoint: 'vault-staging-conn'
-                      namespace: 'vault-staging-ns'
-                      command: 'apply'
-                      arguments: '-f $(Pipeline.Workspace)/k8s-manifests/configmap-staging.yaml'
-                  # applies configmap-staging.yaml to staging namespace
-                  # creates ConfigMap named vaultiq-backend-env in staging
-                  # contains: PORT, DB_HOST, DB_USER, DB_NAME, JWT_EXPIRE, BACKEND_URL
-                  # apply = create if not exists, update if exists
-                  # no manual CLI needed ever ✅
+                - task: Kubernetes@1
+                  displayName: 'Apply ConfigMap to Staging'
+                  inputs:
+                    connectionType: 'kubernetesServiceConnection'
+                    kubernetesServiceEndpoint: 'vault-staging-conn'
+                    namespace: 'vault-staging-ns'
+                    command: 'apply'
+                    arguments: '-f $(Pipeline.Workspace)/k8s-manifests/configmap-staging.yaml'
+                # applies configmap-staging.yaml to staging namespace
+                # creates ConfigMap named vaultiq-backend-env in staging
+                # contains: PORT, DB_HOST, DB_USER, DB_NAME, JWT_EXPIRE, BACKEND_URL
+                # apply = create if not exists, update if exists
+                # no manual CLI needed ever ✅
 
-                  - script: |
-                      kubectl create secret generic vaultiq-secret \
-                        --from-literal=DB_PASSWORD="$(DB-PASSWORD)" \
-                        --from-literal=JWT_SECRET="$(JWT-SECRET)" \
-                        --from-literal=GROQ_API_KEY="$(GROQ-API-KEY)" \
-                        --namespace=vault-staging-ns \
-                        --dry-run=client -o yaml | kubectl apply -f -
-                    displayName: 'Create K8s Secret in Staging'
-                  # kubectl create secret generic → creates Secret object
-                  # vaultiq-secret → name (must match vault-stack.yaml secretKeyRef)
-                  # --from-literal=DB_PASSWORD → key name uses underscore
-                  #   matches what your Node.js code reads: process.env.DB_PASSWORD
-                  # "$(DB-PASSWORD)" → value comes from Variable Group
-                  #   Variable Group key uses hyphen (Key Vault naming rule)
-                  #   pipeline replaces this with actual value before running
-                  #   actual value masked in logs because variable is secret 🔒
-                  # --namespace=vault-staging-ns → creates in staging namespace
-                  # --dry-run=client -o yaml | kubectl apply -f - →
-                  #   generates yaml without creating
-                  #   pipes to kubectl apply
-                  #   safe to run multiple times ✅
+                - script: |
+                    kubectl create secret generic vaultiq-secret \
+                      --from-literal=DB_PASSWORD="$(DB-PASSWORD)" \
+                      --from-literal=JWT_SECRET="$(JWT-SECRET)" \
+                      --from-literal=GROQ_API_KEY="$(GROQ-API-KEY)" \
+                      --namespace=vault-staging-ns \
+                      --dry-run=client -o yaml | kubectl apply -f -
+                  displayName: 'Create K8s Secret in Staging'
+                # kubectl create secret generic → creates Secret object
+                # vaultiq-secret → name (must match vault-stack.yaml secretKeyRef)
+                # --from-literal=DB_PASSWORD → key name uses underscore
+                #   matches what your Node.js code reads: process.env.DB_PASSWORD
+                # "$(DB-PASSWORD)" → value comes from Variable Group
+                #   Variable Group key uses hyphen (Key Vault naming rule)
+                #   pipeline replaces this with actual value before running
+                #   actual value masked in logs because variable is secret 🔒
+                # --namespace=vault-staging-ns → creates in staging namespace
+                # --dry-run=client -o yaml | kubectl apply -f - →
+                #   generates yaml without creating
+                #   pipes to kubectl apply
+                #   safe to run multiple times ✅
 
-                  - task: KubernetesManifest@1
-                    displayName: 'Deploy to Staging'
-                    inputs:
-                      action: 'deploy'
-                      connectionType: 'kubernetesServiceConnection'
-                      kubernetesServiceEndpoint: 'vault-staging-conn'
-                      namespace: 'vault-staging-ns'
-                      manifests: |
-                        $(Pipeline.Workspace)/k8s-manifests/vault-stack.yaml
-                      # uses frozen vault-stack.yaml from artifact
-                      # not live repo — no drift possible
-                      containers: |
-                        $(registryName)/vaultiq-backend:$(Build.BuildId)
-                        $(registryName)/vaultiq-frontend:$(Build.BuildId)
-                      # tells task to replace image tags in vault-stack.yaml
-                      # with these exact versioned images from this build
-                      # Build.BuildId matches what was pushed in build stage
-                      # staging gets EXACTLY what was built ✅
+                - task: KubernetesManifest@1
+                  displayName: 'Deploy to Staging'
+                  inputs:
+                    action: 'deploy'
+                    connectionType: 'kubernetesServiceConnection'
+                    kubernetesServiceConnection: 'vault-staging-conn'
+                    namespace: 'vault-staging-ns'
+                    manifests: |
+                      $(Pipeline.Workspace)/k8s-manifests/vault-stack.yaml
+                    # uses frozen vault-stack.yaml from artifact
+                    # not live repo — no drift possible
+                    containers: |
+                      $(registryName)/vaultiq-backend:$(Build.BuildId)
+                      $(registryName)/vaultiq-frontend:$(Build.BuildId)
+                    # tells task to replace image tags in vault-stack.yaml
+                    # with these exact versioned images from this build
+                    # Build.BuildId matches what was pushed in build stage
+                    # staging gets EXACTLY what was built ✅
 
-    # =========================================================================
-    # STAGE 3: Deploy to Production
-    # =========================================================================
-    - stage: DeployToProductionStage
-      displayName: 'Stage 3: Deploy to Production'
-      dependsOn: DeployToStagingStage
-      # only runs after staging succeeds
-      # plus approval gate if configured in vault-production environment
-      jobs:
-        - deployment: DeployProductionJob
-          displayName: 'Execute Production Deployment'
-          environment: 'vault-production'
-          strategy:
-            runOnce:
-              deploy:
-                steps:
-                  - download: current
-                    artifact: k8s-manifests
-                    displayName: 'Download k8s artifact'
-                  # same frozen artifact as staging
-                  # prod deploys identical files to what staging used ✅
+  # =========================================================================
+  # STAGE 3: Deploy to Production
+  # =========================================================================
+  - stage: DeployToProductionStage
+    displayName: 'Stage 3: Deploy to Production'
+    dependsOn: DeployToStagingStage
+    # only runs after staging succeeds
+    # plus approval gate if configured in vault-production environment
+    jobs:
+      - deployment: DeployProductionJob
+        displayName: 'Execute Production Deployment'
+        environment: 'vault-production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: k8s-manifests
+                  displayName: 'Download k8s artifact'
+                # same frozen artifact as staging
+                # prod deploys identical files to what staging used ✅
 
-                  - task: Kubernetes@1
-                    displayName: 'Login to Production Cluster'
-                    inputs:
-                      connectionType: 'vault-prod-conn'
-                      kubernetesServiceEndpoint: 'vault-prod-conn'
-                      namespace: 'vault-prod-ns'
-                      command: 'login'
-                  # same as staging login but for prod cluster
+                - task: Kubernetes@1
+                  displayName: 'Login to Production Cluster'
+                  inputs:
+                    connectionType: 'kubernetesServiceConnection'   # ✅ FIXED
+                    kubernetesServiceEndpoint: 'vault-prod-conn'    # ✅ FIXED
+                    namespace: 'vault-prod-ns'
+                    command: 'login'
+                # same as staging login but for prod cluster
 
-                  - task: Kubernetes@1
-                    displayName: 'Apply ConfigMap to Production'
-                    inputs:
-                      connectionType: 'kubernetesServiceConnection'
-                      kubernetesServiceEndpoint: 'vault-prod-conn'
-                      namespace: 'vault-prod-ns'
-                      command: 'apply'
-                      arguments: '-f $(Pipeline.Workspace)/k8s-manifests/configmap-prod.yaml'
-                  # same as staging but:
-                  # uses vault-prod-conn → prod namespace
-                  # uses configmap-prod.yaml → has prod BACKEND_URL
+                - task: Kubernetes@1
+                  displayName: 'Apply ConfigMap to Production'
+                  inputs:
+                    connectionType: 'kubernetesServiceConnection'
+                    kubernetesServiceEndpoint: 'vault-prod-conn'    # ✅ FIXED
+                    namespace: 'vault-prod-ns'
+                    command: 'apply'
+                    arguments: '-f $(Pipeline.Workspace)/k8s-manifests/configmap-prod.yaml'
+                # same as staging but:
+                # uses vault-prod-conn → prod namespace
+                # uses configmap-prod.yaml → has prod BACKEND_URL
 
-                  - script: |
-                      kubectl create secret generic vaultiq-secret \
-                        --from-literal=DB_PASSWORD="$(DB-PASSWORD)" \
-                        --from-literal=JWT_SECRET="$(JWT-SECRET)" \
-                        --from-literal=GROQ_API_KEY="$(GROQ-API-KEY)" \
-                        --namespace=vault-prod-ns \
-                        --dry-run=client -o yaml | kubectl apply -f -
-                    displayName: 'Create K8s Secret in Production'
-                  # identical to staging
-                  # only namespace differs: vault-prod-ns
+                - script: |
+                    kubectl create secret generic vaultiq-secret \
+                      --from-literal=DB_PASSWORD="$(DB-PASSWORD)" \
+                      --from-literal=JWT_SECRET="$(JWT-SECRET)" \
+                      --from-literal=GROQ_API_KEY="$(GROQ-API-KEY)" \
+                      --namespace=vault-prod-ns \
+                      --dry-run=client -o yaml | kubectl apply -f -
+                  displayName: 'Create K8s Secret in Production'
+                # identical to staging
+                # only namespace differs: vault-prod-ns
 
-                  - task: KubernetesManifest@1
-                    displayName: 'Deploy to Production'
-                    inputs:
-                      action: 'deploy'
-                      connectionType: 'kubernetesServiceConnection'
-                      kubernetesServiceEndpoint: 'vault-prod-conn'
-                      namespace: 'vault-prod-ns'
-                      manifests: |
-                        $(Pipeline.Workspace)/k8s-manifests/vault-stack.yaml
-                      containers: |
-                        $(registryName)/vaultiq-backend:$(Build.BuildId)
-                        $(registryName)/vaultiq-frontend:$(Build.BuildId)
-                  # same vault-stack.yaml as staging
-                  # same images as staging
-                  # different namespace → prod-ns
-                  # guarantees prod runs EXACTLY what staging ran ✅
+                - task: KubernetesManifest@1
+                  displayName: 'Deploy to Production'
+                  inputs:
+                    action: 'deploy'
+                    connectionType: 'kubernetesServiceConnection'
+                    kubernetesServiceConnection: 'vault-prod-conn' # ✅ Keep this one as connection since it is KubernetesManifest@1 task
+                    namespace: 'vault-prod-ns'
+                    manifests: |
+                      $(Pipeline.Workspace)/k8s-manifests/vault-stack.yaml
+                    containers: |
+                      $(registryName)/vaultiq-backend:$(Build.BuildId)
+                      $(registryName)/vaultiq-frontend:$(Build.BuildId)
+                # same vault-stack.yaml as staging
+                # same images as staging
+                # different namespace → prod-ns
+                # guarantees prod runs EXACTLY what staging ran ✅
