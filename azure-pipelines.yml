@@ -99,11 +99,11 @@ stages:
                   artifact: deployment-files
                   displayName: 'Download deployment files'
 
-                # Fixed: Target path updated to access nested artifact directory loop
+                # Fixed: Corrected to single artifact directory path
                 - task: replacetokens@5
                   displayName: 'Fill staging values into templates'
                   inputs:
-                    targetFiles: '$(Pipeline.Workspace)/deployment-files/deployment-files/templates/*.yaml'
+                    targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
                     encoding: 'auto'
                     tokenPattern: 'azpipelines'
 
@@ -124,7 +124,7 @@ stages:
                       --dry-run=client -o yaml | kubectl apply -f -
                   displayName: 'Create K8s Secret in Staging'
 
-                # Fixed: Manifest path updated to access nested artifact directory loop
+                # Fixed: ConfigMap path targeted cleanly
                 - task: KubernetesManifest@1
                   displayName: 'Apply ConfigMap to Staging'
                   inputs:
@@ -133,9 +133,9 @@ stages:
                     kubernetesServiceConnection: 'vault-staging-conn'
                     namespace: 'vault-staging-ns'
                     manifests: |
-                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/configmap.yaml
+                      $(Pipeline.Workspace)/deployment-files/templates/configmap.yaml
 
-                # Fixed: Manifest paths updated to access nested artifact directory loop
+                # Fixed: Deployment manifest paths targeted cleanly
                 - task: KubernetesManifest@1
                   displayName: 'Deploy to Staging'
                   inputs:
@@ -144,9 +144,9 @@ stages:
                     kubernetesServiceConnection: 'vault-staging-conn'
                     namespace: 'vault-staging-ns'
                     manifests: |
-                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/mysql.yaml
-                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/backend.yaml
-                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/frontend.yaml
+                      $(Pipeline.Workspace)/deployment-files/templates/mysql.yaml
+                      $(Pipeline.Workspace)/deployment-files/templates/backend.yaml
+                      $(Pipeline.Workspace)/deployment-files/templates/frontend.yaml
                     containers: |
                       $(registryName)/vaultiq-backend:$(Build.BuildId)
                       $(registryName)/vaultiq-frontend:$(Build.BuildId)
@@ -176,11 +176,11 @@ stages:
                   artifact: deployment-files
                   displayName: 'Download deployment files'
 
-                # Fixed: Target path updated to access nested artifact directory loop
+                # Fixed: Corrected to single artifact directory path
                 - task: replacetokens@5
                   displayName: 'Fill prod values into templates'
                   inputs:
-                    targetFiles: '$(Pipeline.Workspace)/deployment-files/deployment-files/templates/*.yaml'
+                    targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
                     encoding: 'auto'
                     tokenPattern: 'azpipelines'
 
@@ -201,7 +201,7 @@ stages:
                       --dry-run=client -o yaml | kubectl apply -f -
                   displayName: 'Create K8s Secret in Production'
 
-                # Fixed: Manifest path updated to access nested artifact directory loop
+                # Fixed: ConfigMap path targeted cleanly
                 - task: KubernetesManifest@1
                   displayName: 'Apply ConfigMap to Production'
                   inputs:
@@ -210,9 +210,9 @@ stages:
                     kubernetesServiceConnection: 'vault-prod-conn'
                     namespace: 'vault-prod-ns'
                     manifests: |
-                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/configmap.yaml
+                      $(Pipeline.Workspace)/deployment-files/templates/configmap.yaml
 
-                # Fixed: Manifest paths updated to access nested artifact directory loop
+                # Fixed: Deployment manifest paths targeted cleanly
                 - task: KubernetesManifest@1
                   displayName: 'Deploy to Production'
                   inputs:
@@ -221,9 +221,9 @@ stages:
                     kubernetesServiceConnection: 'vault-prod-conn'
                     namespace: 'vault-prod-ns'
                     manifests: |
-                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/mysql.yaml
-                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/backend.yaml
-                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/frontend.yaml
+                      $(Pipeline.Workspace)/deployment-files/templates/mysql.yaml
+                      $(Pipeline.Workspace)/deployment-files/templates/backend.yaml
+                      $(Pipeline.Workspace)/deployment-files/templates/frontend.yaml
                     containers: |
                       $(registryName)/vaultiq-backend:$(Build.BuildId)
                       $(registryName)/vaultiq-frontend:$(Build.BuildId)
