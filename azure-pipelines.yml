@@ -123,7 +123,6 @@ stages:
                       --dry-run=client -o yaml | kubectl apply -f -
                   displayName: 'Create K8s Secret in Staging'
 
-                # Fixed: Added the correct 'k8s-' filename prefix
                 - task: KubernetesManifest@1
                   displayName: 'Apply ConfigMap to Staging'
                   inputs:
@@ -131,10 +130,8 @@ stages:
                     connectionType: 'kubernetesServiceConnection'
                     kubernetesServiceConnection: 'vault-staging-conn'
                     namespace: 'vault-staging-ns'
-                    manifests: |
-                      $(Pipeline.Workspace)/deployment-files/templates/k8s-configmap.yaml
+                    manifests: '$(Pipeline.Workspace)/deployment-files/templates/k8s-configmap.yaml'
 
-                # Fixed: Added the correct 'k8s-' filename prefix to manifests
                 - task: KubernetesManifest@1
                   displayName: 'Deploy to Staging'
                   inputs:
@@ -142,13 +139,14 @@ stages:
                     connectionType: 'kubernetesServiceConnection'
                     kubernetesServiceConnection: 'vault-staging-conn'
                     namespace: 'vault-staging-ns'
-                    manifests: |
-                      $(Pipeline.Workspace)/deployment-files/templates/k8s-mysql.yaml
-                      $(Pipeline.Workspace)/deployment-files/templates/k8s-backend.yaml
-                      $(Pipeline.Workspace)/deployment-files/templates/k8s-frontend.yaml
-                    containers: |
-                      $(registryName)/vaultiq-backend:$(Build.BuildId)
-                      $(registryName)/vaultiq-frontend:$(Build.BuildId)
+                    # ✅ FIXED: Converted multi-line text blocks to explicit array listings to prevent .trim() failures
+                    manifests:
+                      - '$(Pipeline.Workspace)/deployment-files/templates/k8s-mysql.yaml'
+                      - '$(Pipeline.Workspace)/deployment-files/templates/k8s-backend.yaml'
+                      - '$(Pipeline.Workspace)/deployment-files/templates/k8s-frontend.yaml'
+                    containers:
+                      - '$(registryName)/vaultiq-backend:$(Build.BuildId)'
+                      - '$(registryName)/vaultiq-frontend:$(Build.BuildId)'
 
   # =========================================================================
   # STAGE 3 - Deploy to Production
@@ -199,7 +197,6 @@ stages:
                       --dry-run=client -o yaml | kubectl apply -f -
                   displayName: 'Create K8s Secret in Production'
 
-                # Fixed: Added the correct 'k8s-' filename prefix
                 - task: KubernetesManifest@1
                   displayName: 'Apply ConfigMap to Production'
                   inputs:
@@ -207,10 +204,8 @@ stages:
                     connectionType: 'kubernetesServiceConnection'
                     kubernetesServiceConnection: 'vault-prod-conn'
                     namespace: 'vault-prod-ns'
-                    manifests: |
-                      $(Pipeline.Workspace)/deployment-files/templates/k8s-configmap.yaml
+                    manifests: '$(Pipeline.Workspace)/deployment-files/templates/k8s-configmap.yaml'
 
-                # Fixed: Added the correct 'k8s-' filename prefix to manifests
                 - task: KubernetesManifest@1
                   displayName: 'Deploy to Production'
                   inputs:
@@ -218,10 +213,11 @@ stages:
                     connectionType: 'kubernetesServiceConnection'
                     kubernetesServiceConnection: 'vault-prod-conn'
                     namespace: 'vault-prod-ns'
-                    manifests: |
-                      $(Pipeline.Workspace)/deployment-files/templates/k8s-mysql.yaml
-                      $(Pipeline.Workspace)/deployment-files/templates/k8s-backend.yaml
-                      $(Pipeline.Workspace)/deployment-files/templates/k8s-frontend.yaml
-                    containers: |
-                      $(registryName)/vaultiq-backend:$(Build.BuildId)
-                      $(registryName)/vaultiq-frontend:$(Build.BuildId)
+                    # ✅ FIXED: Converted multi-line text blocks to explicit array listings to prevent .trim() failures
+                    manifests:
+                      - '$(Pipeline.Workspace)/deployment-files/templates/k8s-mysql.yaml'
+                      - '$(Pipeline.Workspace)/deployment-files/templates/k8s-backend.yaml'
+                      - '$(Pipeline.Workspace)/deployment-files/templates/k8s-frontend.yaml'
+                    containers:
+                      - '$(registryName)/vaultiq-backend:$(Build.BuildId)'
+                      - '$(registryName)/vaultiq-frontend:$(Build.BuildId)'
