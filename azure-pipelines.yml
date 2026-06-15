@@ -128,29 +128,21 @@ stages:
                       --dry-run=client -o yaml | kubectl apply -f -
                   displayName: 'Create K8s Secret in Staging'
 
-                - script: |
-                    kubectl apply -f $(Pipeline.Workspace)/deployment-files/templates/ \
-                      --namespace=vault-staging-ns
+                - task: KubernetesManifest@1
                   displayName: 'Deploy to Staging'
-                # ✅ CHANGED from KubernetesManifest@1 to raw kubectl apply
-                # kubectl apply -f <folder> applies ALL yaml files in that folder
-                # avoids all the multiline/space/trim bugs in KubernetesManifest task
-                # --namespace ensures everything goes to staging namespace
-                # image tag substitution handled separately below
-
-                - script: |
-                    kubectl set image deployment/vaultiq-backend-deployment \
-                      backend=$(registryName)/vaultiq-backend:$(Build.BuildId) \
-                      --namespace=vault-staging-ns
-                    kubectl set image deployment/vaultiq-frontend-deployment \
-                      frontend=$(registryName)/vaultiq-frontend:$(Build.BuildId) \
-                      --namespace=vault-staging-ns
-                  displayName: 'Update image tags in Staging'
-                # kubectl set image → updates image tag on running deployment
-                # deployment/vaultiq-backend-deployment → deployment name from vault-stack.yaml
-                # backend= → container name inside that deployment
-                # $(registryName)/vaultiq-backend:$(Build.BuildId) → new image with correct tag
-                # this triggers rolling update — pods replaced one by one with new image
+                  inputs:
+                    action: 'deploy'
+                    connectionType: 'kubernetesServiceConnection'
+                    kubernetesServiceConnection: 'vault-staging-conn'
+                    namespace: 'vault-staging-ns'
+                    manifests: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
+                    # ✅ CHANGED — wildcard picks all yaml files in folder
+                    # no space-separated list → no trim bug
+                    # no multiline → no schema error
+                    # applies all 4 files automatically including configmap
+                    containers: |
+                      $(registryName)/vaultiq-backend:$(Build.BuildId)
+                      $(registryName)/vaultiq-frontend:$(Build.BuildId)
 
   # =========================================================================
   # STAGE 3 - Deploy to Production
@@ -201,18 +193,15 @@ stages:
                       --dry-run=client -o yaml | kubectl apply -f -
                   displayName: 'Create K8s Secret in Production'
 
-                - script: |
-                    kubectl apply -f $(Pipeline.Workspace)/deployment-files/templates/ \
-                      --namespace=vault-prod-ns
+                - task: KubernetesManifest@1
                   displayName: 'Deploy to Production'
-                # same as staging but prod namespace
-
-                - script: |
-                    kubectl set image deployment/vaultiq-backend-deployment \
-                      backend=$(registryName)/vaultiq-backend:$(Build.BuildId) \
-                      --namespace=vault-prod-ns
-                    kubectl set image deployment/vaultiq-frontend-deployment \
-                      frontend=$(registryName)/vaultiq-frontend:$(Build.BuildId) \
-                      --namespace=vault-prod-ns
-                  displayName: 'Update image tags in Production'
-                # same as staging but prod namespace
+                  inputs:
+                    action: 'deploy'
+                    connectionType: 'kubernetesServiceConnection'
+                    kubernetesServiceConnection: 'vault-prod-conn'
+                    namespace: 'vault-prod-ns'
+                    manifests: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
+                    # ✅ same wildcard fix for prod
+                    containers: |
+                      $(registryName)/vaultiq-backend:$(Build.BuildId)
+                      $(registryName)/vaultiq-frontend:$(Build.BuildId)
