@@ -3,7 +3,7 @@ resources:
     - repository: deployments
       type: github
       name: nhkmehak/vaultiq-deployments
-      connection: nhkmehak
+      endpoint: nhkmehak
 
 trigger:
   - main
