@@ -147,7 +147,7 @@ stages:
                   displayName: 'Apply ConfigMap to Staging'
                   inputs:
                     connectionType: 'kubernetesServiceConnection'
-                    kubernetesServiceConnection: 'vault-staging-conn'
+                    kubernetesServiceEndpoint: 'vault-staging-conn'
                     namespace: 'vault-staging-ns'
                     command: 'apply'
                     arguments: '-f $(Pipeline.Workspace)/k8s-manifests/configmap-staging.yaml'
@@ -184,7 +184,7 @@ stages:
                   inputs:
                     action: 'deploy'
                     connectionType: 'kubernetesServiceConnection'
-                    kubernetesServiceConnection: 'vault-staging-conn'
+                    kubernetesServiceEndpoint: 'vault-staging-conn'
                     namespace: 'vault-staging-ns'
                     manifests: |
                       $(Pipeline.Workspace)/k8s-manifests/vault-stack.yaml
@@ -224,7 +224,7 @@ stages:
                   displayName: 'Login to Production Cluster'
                   inputs:
                     connectionType: 'kubernetesServiceConnection'
-                    kubernetesServiceConnection: 'vault-prod-conn'
+                    kubernetesServiceEndpoint: 'vault-prod-conn'
                     namespace: 'vault-prod-ns'
                     command: 'login'
                 # same as staging login but for prod cluster
@@ -233,7 +233,7 @@ stages:
                   displayName: 'Apply ConfigMap to Production'
                   inputs:
                     connectionType: 'kubernetesServiceConnection'
-                    kubernetesServiceConnection: 'vault-prod-conn'
+                    kubernetesServiceEndpoint: 'vault-prod-conn'
                     namespace: 'vault-prod-ns'
                     command: 'apply'
                     arguments: '-f $(Pipeline.Workspace)/k8s-manifests/configmap-prod.yaml'
@@ -257,7 +257,7 @@ stages:
                   inputs:
                     action: 'deploy'
                     connectionType: 'kubernetesServiceConnection'
-                    kubernetesServiceConnection: 'vault-prod-conn'
+                    kubernetesServiceEndpoint: 'vault-prod-conn'
                     namespace: 'vault-prod-ns'
                     manifests: |
                       $(Pipeline.Workspace)/k8s-manifests/vault-stack.yaml
