@@ -33,13 +33,11 @@ stages:
           - checkout: deployments
             path: deployment-repo
 
-          # Fixed: Swapped to absolute Agent Build Directory so the runner finds .npmrc
           - task: npmAuthenticate@0
             displayName: 'Authenticate npm with Azure Artifacts Feed'
             inputs:
               workingFile: '$(Agent.BuildDirectory)/gripinvest/backend/.npmrc'
 
-          # Fixed: Swapped to absolute Agent Build Directory path for the cat command
           - script: |
               TOKEN=$(cat $(Agent.BuildDirectory)/gripinvest/backend/.npmrc | grep _authToken | cut -d'=' -f2)
               echo "##vso[task.setvariable variable=NPM_TOKEN]$TOKEN"
@@ -72,7 +70,6 @@ stages:
               Dockerfile: '$(Agent.BuildDirectory)/gripinvest/frontend/Dockerfile'
               tags: '$(Build.BuildId)'
 
-          # Fixed: Published deployment-repo via the explicit $(Agent.BuildDirectory) path
           - publish: $(Agent.BuildDirectory)/deployment-repo
             artifact: deployment-files
             displayName: 'Publish deployment repo as artifact'
@@ -102,10 +99,11 @@ stages:
                   artifact: deployment-files
                   displayName: 'Download deployment files'
 
+                # Fixed: Target path updated to access nested artifact directory loop
                 - task: replacetokens@5
                   displayName: 'Fill staging values into templates'
                   inputs:
-                    targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
+                    targetFiles: '$(Pipeline.Workspace)/deployment-files/deployment-files/templates/*.yaml'
                     encoding: 'auto'
                     tokenPattern: 'azpipelines'
 
@@ -117,7 +115,6 @@ stages:
                     namespace: 'vault-staging-ns'
                     command: 'login'
 
-                # Fixed: Changed variable expansions to use underscores (e.g. $(DB_PASSWORD))
                 - script: |
                     kubectl create secret generic vaultiq-secret \
                       --from-literal=DB_PASSWORD=$(DB_PASSWORD) \
@@ -127,6 +124,7 @@ stages:
                       --dry-run=client -o yaml | kubectl apply -f -
                   displayName: 'Create K8s Secret in Staging'
 
+                # Fixed: Manifest path updated to access nested artifact directory loop
                 - task: KubernetesManifest@1
                   displayName: 'Apply ConfigMap to Staging'
                   inputs:
@@ -135,8 +133,9 @@ stages:
                     kubernetesServiceConnection: 'vault-staging-conn'
                     namespace: 'vault-staging-ns'
                     manifests: |
-                      $(Pipeline.Workspace)/deployment-files/templates/configmap.yaml
+                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/configmap.yaml
 
+                # Fixed: Manifest paths updated to access nested artifact directory loop
                 - task: KubernetesManifest@1
                   displayName: 'Deploy to Staging'
                   inputs:
@@ -145,9 +144,9 @@ stages:
                     kubernetesServiceConnection: 'vault-staging-conn'
                     namespace: 'vault-staging-ns'
                     manifests: |
-                      $(Pipeline.Workspace)/deployment-files/templates/mysql.yaml
-                      $(Pipeline.Workspace)/deployment-files/templates/backend.yaml
-                      $(Pipeline.Workspace)/deployment-files/templates/frontend.yaml
+                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/mysql.yaml
+                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/backend.yaml
+                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/frontend.yaml
                     containers: |
                       $(registryName)/vaultiq-backend:$(Build.BuildId)
                       $(registryName)/vaultiq-frontend:$(Build.BuildId)
@@ -177,10 +176,11 @@ stages:
                   artifact: deployment-files
                   displayName: 'Download deployment files'
 
+                # Fixed: Target path updated to access nested artifact directory loop
                 - task: replacetokens@5
                   displayName: 'Fill prod values into templates'
                   inputs:
-                    targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
+                    targetFiles: '$(Pipeline.Workspace)/deployment-files/deployment-files/templates/*.yaml'
                     encoding: 'auto'
                     tokenPattern: 'azpipelines'
 
@@ -192,7 +192,6 @@ stages:
                     namespace: 'vault-prod-ns'
                     command: 'login'
 
-                # Fixed: Changed variable expansions to use underscores (e.g. $(DB_PASSWORD))
                 - script: |
                     kubectl create secret generic vaultiq-secret \
                       --from-literal=DB_PASSWORD=$(DB_PASSWORD) \
@@ -202,6 +201,7 @@ stages:
                       --dry-run=client -o yaml | kubectl apply -f -
                   displayName: 'Create K8s Secret in Production'
 
+                # Fixed: Manifest path updated to access nested artifact directory loop
                 - task: KubernetesManifest@1
                   displayName: 'Apply ConfigMap to Production'
                   inputs:
@@ -210,8 +210,9 @@ stages:
                     kubernetesServiceConnection: 'vault-prod-conn'
                     namespace: 'vault-prod-ns'
                     manifests: |
-                      $(Pipeline.Workspace)/deployment-files/templates/configmap.yaml
+                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/configmap.yaml
 
+                # Fixed: Manifest paths updated to access nested artifact directory loop
                 - task: KubernetesManifest@1
                   displayName: 'Deploy to Production'
                   inputs:
@@ -220,9 +221,9 @@ stages:
                     kubernetesServiceConnection: 'vault-prod-conn'
                     namespace: 'vault-prod-ns'
                     manifests: |
-                      $(Pipeline.Workspace)/deployment-files/templates/mysql.yaml
-                      $(Pipeline.Workspace)/deployment-files/templates/backend.yaml
-                      $(Pipeline.Workspace)/deployment-files/templates/frontend.yaml
+                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/mysql.yaml
+                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/backend.yaml
+                      $(Pipeline.Workspace)/deployment-files/deployment-files/templates/frontend.yaml
                     containers: |
                       $(registryName)/vaultiq-backend:$(Build.BuildId)
                       $(registryName)/vaultiq-frontend:$(Build.BuildId)
