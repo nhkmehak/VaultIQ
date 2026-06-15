@@ -3,7 +3,7 @@ resources:
     - repository: deployments
       type: github
       name: nhkmehak/vaultiq-deployments
-      endpoint: nhkmehak
+      endpoint: github-patt
 
 trigger:
   - main
