@@ -83,10 +83,14 @@ stages:
     variables:
       ENVIRONMENT: 'staging'
       BACKEND_URL: 'http://20.204.201.232:5000/api'
-      BACKEND_IMAGE: '$(registryName)/vaultiq-backend:$(Build.BuildId)'
-      FRONTEND_IMAGE: '$(registryName)/vaultiq-frontend:$(Build.BuildId)'
       BACKEND_REPLICAS: '1'
       FRONTEND_REPLICAS: '1'
+      REGISTRY_NAME: 'vaultregistry.azurecr.io'
+      BUILD_ID: $(Build.BuildId)
+      # ✅ no nested variables
+      # REGISTRY_NAME and BUILD_ID are simple values
+      # replacetokens can resolve these correctly
+      # template uses #{REGISTRY_NAME}#/vaultiq-backend:#{BUILD_ID}#
     jobs:
       - deployment: DeployStagingJob
         displayName: 'Execute Staging Deployment'
@@ -105,15 +109,14 @@ stages:
                     targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
                     encoding: 'auto'
                     tokenPattern: 'azpipelines'
-                  # replacetokens reads all *.yaml files in templates folder
-                  # finds #{VARIABLE_NAME}# placeholders
-                  # replaces with actual pipeline variable values:
-                  # #{BACKEND_IMAGE}# → vaultregistry.azurecr.io/vaultiq-backend:202
+                  # replacetokens finds #{VARIABLE}# in all yaml files
+                  # replaces with pipeline variable values
+                  # #{REGISTRY_NAME}# → vaultregistry.azurecr.io
+                  # #{BUILD_ID}# → 202 (actual build number)
                   # #{BACKEND_REPLICAS}# → 1
                   # #{ENVIRONMENT}# → staging
                   # #{BACKEND_URL}# → http://20.204.201.232:5000/api
-                  # files are modified in place on pipeline VM
-                  # ready to apply to cluster
+                  # no nested variables → replacetokens works correctly ✅
 
                 - task: Kubernetes@1
                   displayName: 'Login to Staging Cluster'
@@ -122,8 +125,6 @@ stages:
                     kubernetesServiceEndpoint: 'vault-staging-conn'
                     namespace: 'vault-staging-ns'
                     command: 'login'
-                  # sets up kubeconfig on pipeline VM
-                  # kubectl commands in next steps can now talk to cluster
 
                 - script: |
                     kubectl create secret generic vaultiq-secret \
@@ -133,19 +134,13 @@ stages:
                       --namespace=vault-staging-ns \
                       --dry-run=client -o yaml | kubectl apply -f -
                   displayName: 'Create K8s Secret in Staging'
-                  # creates vaultiq-secret in staging namespace
-                  # values come from Variable Group (encrypted)
-                  # dry-run | apply pattern → safe to rerun
 
                 - script: |
                     kubectl apply -f $(Pipeline.Workspace)/deployment-files/templates/ -n vault-staging-ns
                   displayName: 'Deploy to Staging'
-                  # ✅ CHANGED — kubectl apply directly instead of KubernetesManifest@1
-                  # -f <folder> → applies ALL yaml files in templates folder
-                  # replacetokens already filled in:
-                  #   image tags, replicas, environment, backend URL
-                  # no wildcard bug, no trim bug, no path issues
-                  # -n vault-staging-ns → all resources go to staging namespace
+                  # applies all yaml files in templates folder
+                  # replacetokens already filled all placeholders
+                  # no KubernetesManifest@1 bugs
 
   # =========================================================================
   # STAGE 3 - Deploy to Production
@@ -156,10 +151,13 @@ stages:
     variables:
       ENVIRONMENT: 'prod'
       BACKEND_URL: 'http://PROD_IP_HERE:5000/api'
-      BACKEND_IMAGE: '$(registryName)/vaultiq-backend:$(Build.BuildId)'
-      FRONTEND_IMAGE: '$(registryName)/vaultiq-frontend:$(Build.BuildId)'
       BACKEND_REPLICAS: '1'
       FRONTEND_REPLICAS: '1'
+      REGISTRY_NAME: 'vaultregistry.azurecr.io'
+      BUILD_ID: $(Build.BuildId)
+      # ✅ FIXED — removed nested BACKEND_IMAGE and FRONTEND_IMAGE
+      # same simple variables as staging
+      # only ENVIRONMENT and BACKEND_URL differ
     jobs:
       - deployment: DeployProductionJob
         displayName: 'Execute Production Deployment'
@@ -178,11 +176,11 @@ stages:
                     targetFiles: '$(Pipeline.Workspace)/deployment-files/templates/*.yaml'
                     encoding: 'auto'
                     tokenPattern: 'azpipelines'
-                  # same as staging but different variable values:
+                  # same as staging but:
                   # #{ENVIRONMENT}# → prod
                   # #{BACKEND_URL}# → http://PROD_IP_HERE:5000/api
-                  # #{BACKEND_IMAGE}# → same image as staging (built once, deployed twice)
-                  # this guarantees prod runs EXACTLY what staging ran ✅
+                  # #{BUILD_ID}# → same build number as staging
+                  # guarantees prod runs exactly what staging ran ✅
 
                 - task: Kubernetes@1
                   displayName: 'Login to Production Cluster'
@@ -204,6 +202,3 @@ stages:
                 - script: |
                     kubectl apply -f $(Pipeline.Workspace)/deployment-files/templates/ -n vault-prod-ns
                   displayName: 'Deploy to Production'
-                  # same as staging but prod namespace
-                  # prod gets identical images to staging ✅
-                  # only BACKEND_URL and ENVIRONMENT differ
