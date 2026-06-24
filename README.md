@@ -209,4 +209,7 @@ This project was created as an internship assignment for Grip Invest.
 
 This project is for educational purposes.
 
-DEMO UPDATE WHOLE PIPELINE
+DEMO
+UPDATE
+FOR
+WHOLE PIPELINE
