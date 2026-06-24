@@ -208,3 +208,5 @@ This project was created as an internship assignment for Grip Invest.
 ## 📄 License
 
 This project is for educational purposes.
+
+DEMO UPDATE WHOLE PIPELINE
